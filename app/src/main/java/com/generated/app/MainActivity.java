@@ -2,11 +2,13 @@ package com.generated.app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.TimePickerDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -16,6 +18,7 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -24,10 +27,12 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
 
@@ -37,6 +42,10 @@ public class MainActivity extends Activity {
     private static final int TAB_FAMILY = 3;
     private static final int TAB_TEHILLIM = 4;
     private static final int TAB_SETTINGS = 5;
+
+    private static final String PREFS_NAME = "ZichronSettings";
+    private static final String PREF_NOTIF_HOUR = "notif_hour";
+    private static final String PREF_NOTIF_MINUTE = "notif_minute";
 
     private int currentTab = TAB_HOME;
 
@@ -48,6 +57,10 @@ public class MainActivity extends Activity {
     // Calendar state
     private int calYear;
     private int calMonth; // 0-11
+
+    private static final String[] RELATIVE_PRESETS = {
+            "אבא", "אמא", "אח", "אחות", "סבא", "סבתא", "דוד", "דודה", "בן דוד", "חבר", "קרוב אחר"
+    };
 
     private static final String[] TEHILLIM_TITLES = {
             "פרק כ\"ג - ה' רֹעִי לֹא אֶחְסָר",
@@ -105,9 +118,9 @@ public class MainActivity extends Activity {
         header.addView(titleView);
 
         TextView subTitle = new TextView(this);
-        subTitle.setText("לוח חיים יהודי");
+        subTitle.setText("לוח חיים יהודי • אופליין");
         subTitle.setTextColor(Color.parseColor("#E0E6ED"));
-        subTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        subTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         header.addView(subTitle);
 
         root.addView(header);
@@ -139,7 +152,6 @@ public class MainActivity extends Activity {
             b.setTypeface(Typeface.DEFAULT_BOLD);
             b.setTextColor(Color.WHITE);
             b.setBackgroundResource(R.drawable.tab_item_selector);
-            // Touch & Keypad optimized: focusable for D-pad, NOT focusableInTouchMode so 1-touch responds immediately!
             b.setFocusable(true);
             b.setFocusableInTouchMode(false);
             b.setMinHeight(dp(48));
@@ -252,7 +264,7 @@ public class MainActivity extends Activity {
         }
         mainContentContainer.addView(dateCard);
 
-        // Quick Action Shortcuts for Touch & Keypad
+        // Quick Action Shortcuts
         LinearLayout actionRow = new LinearLayout(this);
         actionRow.setOrientation(LinearLayout.HORIZONTAL);
         actionRow.setPadding(0, 0, 0, dp(14));
@@ -416,18 +428,20 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // TAB 2: לוח שנה (Calendar)
+    // TAB 2: לוח שנה (Calendar) - Compact Nav Buttons
     // ========================================================
     private void renderCalendarScreen() {
         View calCard = createCardView();
         LinearLayout calInner = (LinearLayout) calCard;
 
-        // Month Bar
+        // Compact Month Navigation Bar
         LinearLayout navBar = new LinearLayout(this);
         navBar.setOrientation(LinearLayout.HORIZONTAL);
         navBar.setGravity(Gravity.CENTER_VERTICAL);
+        navBar.setPadding(dp(4), dp(2), dp(4), dp(8));
 
-        Button prevBtn = createFocusableButton("חודש קודם ►", false);
+        // Smaller, refined prev button
+        Button prevBtn = createCompactNavButton("► קודם");
         prevBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -443,14 +457,15 @@ public class MainActivity extends Activity {
 
         TextView monthTitle = new TextView(this);
         monthTitle.setText(HebrewDateUtil.GREGORIAN_MONTHS_HEB[calMonth] + " " + calYear);
-        monthTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+        monthTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         monthTitle.setTypeface(Typeface.DEFAULT_BOLD);
         monthTitle.setTextColor(Color.parseColor("#101D33"));
         monthTitle.setGravity(Gravity.CENTER);
         monthTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         navBar.addView(monthTitle);
 
-        Button nextBtn = createFocusableButton("◄ חודש הבא", false);
+        // Smaller, refined next button
+        Button nextBtn = createCompactNavButton("הבא ◄");
         nextBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -469,7 +484,7 @@ public class MainActivity extends Activity {
         // Weekday Headers
         LinearLayout daysHeader = new LinearLayout(this);
         daysHeader.setOrientation(LinearLayout.HORIZONTAL);
-        daysHeader.setPadding(0, dp(14), 0, dp(8));
+        daysHeader.setPadding(0, dp(6), 0, dp(6));
         String[] daysOfWeek = {"א'", "ב'", "ג'", "ד'", "ה'", "ו'", "שבת"};
         for (String dow : daysOfWeek) {
             TextView tv = new TextView(this);
@@ -498,7 +513,7 @@ public class MainActivity extends Activity {
         int currentCell = 1;
         for (int i = 1; i < firstDayOfWeek; i++) {
             View emptyCell = new View(this);
-            emptyCell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(64), 1f));
+            emptyCell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(60), 1f));
             weekRow.addView(emptyCell);
             currentCell++;
         }
@@ -532,7 +547,7 @@ public class MainActivity extends Activity {
 
             Button cell = new Button(this);
             cell.setFocusable(true);
-            cell.setFocusableInTouchMode(false); // Touch reacts on 1st tap
+            cell.setFocusableInTouchMode(false);
             cell.setBackgroundResource(R.drawable.card_selector);
             cell.setPadding(dp(2), dp(2), dp(2), dp(2));
 
@@ -548,7 +563,7 @@ public class MainActivity extends Activity {
                 cell.setTextColor(Color.parseColor("#B8860B"));
             }
 
-            cell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(64), 1f));
+            cell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(60), 1f));
             cell.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -568,13 +583,31 @@ public class MainActivity extends Activity {
 
         while (currentCell % 7 != 1) {
             View emptyCell = new View(this);
-            emptyCell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(64), 1f));
+            emptyCell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(60), 1f));
             weekRow.addView(emptyCell);
             currentCell++;
         }
         calInner.addView(weekRow);
 
         mainContentContainer.addView(calCard);
+    }
+
+    private Button createCompactNavButton(String text) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        b.setTypeface(Typeface.DEFAULT_BOLD);
+        b.setTextColor(Color.WHITE);
+        b.setBackgroundResource(R.drawable.btn_small_selector);
+        b.setFocusable(true);
+        b.setFocusableInTouchMode(false);
+        b.setMinHeight(dp(36));
+        b.setMinimumHeight(dp(36));
+        b.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+        return b;
     }
 
     private void showDayDetails(int gDay, int gMonth, int gYear, HebrewDateUtil.HebrewDate hd, String holiday) {
@@ -612,7 +645,7 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // TAB 3: יארצייטים (Yahrzeits) - Hebrew Date input & Default "אבא" / "אמא"
+    // TAB 3: יארצייטים (Yahrzeits) - Hebrew Date input & Full relatives
     // ========================================================
     private void renderYahrzeitsScreen() {
         // Quick Presets Row for "אבא" and "אמא"
@@ -698,7 +731,6 @@ public class MainActivity extends Activity {
         mainContentContainer.addView(listCard);
     }
 
-    // Hebrew date picker dialog with default "אבא" / "אמא"
     private void showAddYahrzeitDialog(String defaultRole) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("הוספת יארצייט - תאריך עברי");
@@ -708,40 +740,63 @@ public class MainActivity extends Activity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(dp(20), dp(10), dp(20), dp(10));
 
-        // Quick Preset Selector Row
+        // Expanded Horizontal Scroll for All Relatives Chips
         TextView presetLabel = new TextView(this);
-        presetLabel.setText("בחירה מהירה:");
+        presetLabel.setText("בחירה מהירה של קרבה:");
         presetLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         presetLabel.setTextColor(Color.parseColor("#4B5563"));
         layout.addView(presetLabel);
 
+        HorizontalScrollView chipScroll = new HorizontalScrollView(this);
+        chipScroll.setHorizontalScrollBarEnabled(false);
+        chipScroll.setPadding(0, dp(4), 0, dp(10));
+
         LinearLayout chipsRow = new LinearLayout(this);
         chipsRow.setOrientation(LinearLayout.HORIZONTAL);
-        chipsRow.setPadding(0, dp(4), 0, dp(10));
 
-        Button chipDad = createChipButton("אבא");
-        Button chipMom = createChipButton("אמא");
-        Button chipOther = createChipButton("קרוב אחר");
-        chipsRow.addView(chipDad);
-
-        View chipSpacer = new View(this);
-        chipSpacer.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
-        chipsRow.addView(chipSpacer);
-        chipsRow.addView(chipMom);
-
-        View chipSpacer2 = new View(this);
-        chipSpacer2.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
-        chipsRow.addView(chipSpacer2);
-        chipsRow.addView(chipOther);
-
-        layout.addView(chipsRow);
-
-        final EditText etFirst = createLabeledInput(layout, "שם פרטי של הנפטר/ת:");
+        final EditText etFirst = createLabeledInput(layout, "שם פרטי / תואר הנפטר/ת:");
         final EditText etLast = createLabeledInput(layout, "שם משפחה:");
         final EditText etParent = createLabeledInput(layout, "שם ההורה (בן / בת):");
 
-        // Apply defaults
         final boolean[] isFather = new boolean[]{true};
+
+        // Populate and handle each relative chip
+        for (final String rel : RELATIVE_PRESETS) {
+            Button chip = createChipButton(rel);
+            chip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if ("קרוב אחר".equals(rel)) {
+                        // Working button for "קרוב אחר" - clears field, focuses it and opens keyboard!
+                        etFirst.setText("");
+                        etFirst.setHint("הקלד שם או קרבה מותאמת אישית...");
+                        etFirst.requestFocus();
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        if (imm != null) {
+                            imm.showSoftInput(etFirst, InputMethodManager.SHOW_IMPLICIT);
+                        }
+                        Toast.makeText(MainActivity.this, "נא להקליד שם או קרבה", Toast.LENGTH_SHORT).show();
+                    } else {
+                        etFirst.setText(rel);
+                        if (rel.equals("אמא") || rel.equals("אחות") || rel.equals("סבתא") || rel.equals("דודה") || rel.equals("בת דודה")) {
+                            isFather[0] = false;
+                        } else {
+                            isFather[0] = true;
+                        }
+                    }
+                }
+            });
+
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            clp.setMargins(0, 0, dp(6), 0);
+            chip.setLayoutParams(clp);
+            chipsRow.addView(chip);
+        }
+        chipScroll.addView(chipsRow);
+        layout.addView(chipScroll);
+
+        // Set initial preset
         if ("אבא".equals(defaultRole)) {
             etFirst.setText("אבא מורי");
             isFather[0] = true;
@@ -749,33 +804,11 @@ public class MainActivity extends Activity {
             etFirst.setText("אמי מורתי");
             isFather[0] = false;
         } else {
-            // Default name prefilled to "אבא" as requested
             etFirst.setText("אבא");
             isFather[0] = true;
         }
 
-        chipDad.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                etFirst.setText("אבא מורי");
-                isFather[0] = true;
-            }
-        });
-        chipMom.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                etFirst.setText("אמי מורתי");
-                isFather[0] = false;
-            }
-        });
-        chipOther.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                etFirst.setText("");
-            }
-        });
-
-        // HEBREW DATE SELECTION
+        // Hebrew Date Selection
         TextView hebDateHeader = new TextView(this);
         hebDateHeader.setText("תאריך עברי של היארצייט:");
         hebDateHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
@@ -784,7 +817,6 @@ public class MainActivity extends Activity {
         hebDateHeader.setPadding(0, dp(12), 0, dp(4));
         layout.addView(hebDateHeader);
 
-        // Spinner for Hebrew Day (א' - ל')
         TextView dayLabel = new TextView(this);
         dayLabel.setText("יום בחודש (עברי):");
         dayLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
@@ -797,14 +829,12 @@ public class MainActivity extends Activity {
         ArrayAdapter<String> dayAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_dropdown_item, HebrewDateUtil.HEBREW_DAYS);
         daySpinner.setAdapter(dayAdapter);
-        // Default to today's Hebrew day
         HebrewDateUtil.HebrewDate todayHeb = HebrewDateUtil.getTodayHebrew();
         if (todayHeb.day >= 1 && todayHeb.day <= 30) {
             daySpinner.setSelection(todayHeb.day - 1);
         }
         layout.addView(daySpinner);
 
-        // Spinner for Hebrew Month (תשרי - אלול)
         TextView monthLabel = new TextView(this);
         monthLabel.setText("חודש עברי:");
         monthLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
@@ -823,7 +853,6 @@ public class MainActivity extends Activity {
         }
         layout.addView(monthSpinner);
 
-        // Hebrew Year input
         final EditText etHYear = createLabeledInput(layout, "שנת פטירה עברית (למשל: תשפ\"ד או מספר 5784):");
         etHYear.setText(HebrewDateUtil.formatHebrewYear(todayHeb.year));
 
@@ -840,7 +869,7 @@ public class MainActivity extends Activity {
                 String ln = etLast.getText().toString().trim();
                 String pr = etParent.getText().toString().trim();
                 if (fn.isEmpty()) {
-                    fn = "אבא"; // Default fallback
+                    fn = "אבא";
                 }
 
                 int chosenHebDay = daySpinner.getSelectedItemPosition() + 1;
@@ -854,7 +883,7 @@ public class MainActivity extends Activity {
                         ln,
                         pr.isEmpty() ? "פלוני" : pr,
                         isFather[0],
-                        0, 0, 0, // Hebrew date is primary
+                        0, 0, 0,
                         chosenHebDay,
                         chosenHebMonth,
                         chosenHebYear,
@@ -901,10 +930,9 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // TAB 4: ספר משפחה (Family Book) - Default "אבא" ו"אמא"
+    // TAB 4: ספר משפחה (Family Book) - More Relatives & Working "קרוב אחר"
     // ========================================================
     private void renderFamilyScreen() {
-        // Quick Presets Row for "אבא" and "אמא"
         LinearLayout quickAddBar = new LinearLayout(this);
         quickAddBar.setOrientation(LinearLayout.HORIZONTAL);
         quickAddBar.setPadding(0, 0, 0, dp(12));
@@ -935,7 +963,7 @@ public class MainActivity extends Activity {
 
         mainContentContainer.addView(quickAddBar);
 
-        Button addCustomMember = createFocusableButton("+ הוסף בן משפחה נוסף", false);
+        Button addCustomMember = createFocusableButton("+ הוסף בן משפחה / קרוב", false);
         addCustomMember.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -1002,45 +1030,63 @@ public class MainActivity extends Activity {
 
     private void showAddFamilyDialog(String defaultRelation) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("הוספת בן/בת משפחה");
+        builder.setTitle("הוספת בן/בת משפחה או קרוב");
 
         ScrollView sv = new ScrollView(this);
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(dp(20), dp(10), dp(20), dp(10));
 
-        // Quick Preset Buttons
+        // Relative Chips with full varieties
         TextView presetLabel = new TextView(this);
-        presetLabel.setText("בחירה מהירה:");
+        presetLabel.setText("בחירה מהירה של קרבה:");
         presetLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         presetLabel.setTextColor(Color.parseColor("#4B5563"));
         layout.addView(presetLabel);
 
+        HorizontalScrollView chipScroll = new HorizontalScrollView(this);
+        chipScroll.setHorizontalScrollBarEnabled(false);
+        chipScroll.setPadding(0, dp(4), 0, dp(10));
+
         LinearLayout chipsRow = new LinearLayout(this);
         chipsRow.setOrientation(LinearLayout.HORIZONTAL);
-        chipsRow.setPadding(0, dp(4), 0, dp(10));
-
-        Button chipDad = createChipButton("אבא");
-        Button chipMom = createChipButton("אמא");
-        Button chipOther = createChipButton("אחר");
-        chipsRow.addView(chipDad);
-
-        View cSp1 = new View(this);
-        cSp1.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
-        chipsRow.addView(cSp1);
-        chipsRow.addView(chipMom);
-
-        View cSp2 = new View(this);
-        cSp2.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
-        chipsRow.addView(cSp2);
-        chipsRow.addView(chipOther);
-
-        layout.addView(chipsRow);
 
         final EditText etName = createLabeledInput(layout, "שם מלא:");
-        final EditText etRel = createLabeledInput(layout, "קרבה (אבא / אמא / בן / בת / נכד...):");
+        final EditText etRel = createLabeledInput(layout, "קרבה (אבא / אמא / אח / דוד / חבר...):");
 
-        // Set default name and relation to אבא or אמא
+        for (final String rel : RELATIVE_PRESETS) {
+            Button chip = createChipButton(rel);
+            chip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if ("קרוב אחר".equals(rel)) {
+                        // Working button for "קרוב אחר"
+                        etName.setText("");
+                        etRel.setText("");
+                        etName.setHint("שם הקרוב...");
+                        etRel.setHint("סוג הקרבה...");
+                        etName.requestFocus();
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        if (imm != null) {
+                            imm.showSoftInput(etName, InputMethodManager.SHOW_IMPLICIT);
+                        }
+                        Toast.makeText(MainActivity.this, "נא להקליד שם וקרבה מותאמת אישית", Toast.LENGTH_SHORT).show();
+                    } else {
+                        etName.setText(rel);
+                        etRel.setText(rel);
+                    }
+                }
+            });
+
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            clp.setMargins(0, 0, dp(6), 0);
+            chip.setLayoutParams(clp);
+            chipsRow.addView(chip);
+        }
+        chipScroll.addView(chipsRow);
+        layout.addView(chipScroll);
+
         if ("אבא".equals(defaultRelation)) {
             etName.setText("אבא");
             etRel.setText("אבא");
@@ -1048,32 +1094,9 @@ public class MainActivity extends Activity {
             etName.setText("אמא");
             etRel.setText("אמא");
         } else {
-            // Default preset is "אבא"
             etName.setText("אבא");
             etRel.setText("אבא");
         }
-
-        chipDad.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                etName.setText("אבא");
-                etRel.setText("אבא");
-            }
-        });
-        chipMom.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                etName.setText("אמא");
-                etRel.setText("אמא");
-            }
-        });
-        chipOther.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                etName.setText("");
-                etRel.setText("");
-            }
-        });
 
         final EditText etDay = createLabeledInput(layout, "יום לידה (1-31):");
         etDay.setInputType(InputType.TYPE_CLASS_NUMBER);
@@ -1098,10 +1121,10 @@ public class MainActivity extends Activity {
                 String name = etName.getText().toString().trim();
                 String rel = etRel.getText().toString().trim();
                 if (name.isEmpty()) {
-                    name = "אבא";
+                    name = "קרוב";
                 }
                 if (rel.isEmpty()) {
-                    rel = "אבא";
+                    rel = "משפחה";
                 }
 
                 int d = parseIntSafe(etDay.getText().toString(), 1);
@@ -1307,19 +1330,48 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // TAB 6: הגדרות (Settings)
+    // TAB 6: הגדרות (Settings) - Notification Hours & Copyright
     // ========================================================
     private void renderSettingsScreen() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int savedHour = prefs.getInt(PREF_NOTIF_HOUR, 8);
+        int savedMin = prefs.getInt(PREF_NOTIF_MINUTE, 0);
+
+        // Alert Time Setting Card
+        View timeCard = createCardView();
+        LinearLayout timeInner = (LinearLayout) timeCard;
+        timeInner.addView(createSectionHeader("שעת קבלת התראות ותזכורות"));
+
+        TextView timeDesc = new TextView(this);
+        timeDesc.setText("קבע את השעה המדויקת שבה תרצה לקבל תזכורת יומית על יארצייטים וימי הולדת:");
+        timeDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        timeDesc.setTextColor(Color.parseColor("#333333"));
+        timeDesc.setPadding(0, 0, 0, dp(10));
+        timeInner.addView(timeDesc);
+
+        final TextView currentTimeDisplay = new TextView(this);
+        currentTimeDisplay.setText("שעת ההתראה הנוכחית: " + String.format(Locale.getDefault(), "%02d:%02d", savedHour, savedMin));
+        currentTimeDisplay.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        currentTimeDisplay.setTypeface(Typeface.DEFAULT_BOLD);
+        currentTimeDisplay.setTextColor(Color.parseColor("#B8860B"));
+        currentTimeDisplay.setPadding(0, 0, 0, dp(12));
+        timeInner.addView(currentTimeDisplay);
+
+        Button changeTimeBtn = createFocusableButton("בחר שעה להתראה ⏰", true);
+        changeTimeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showTimeSelectionDialog(currentTimeDisplay);
+            }
+        });
+        timeInner.addView(changeTimeBtn);
+
+        mainContentContainer.addView(timeCard);
+
+        // Notification Options
         View card = createCardView();
         LinearLayout inner = (LinearLayout) card;
-        inner.addView(createSectionHeader("הגדרות תזכורות והתראות"));
-
-        TextView desc = new TextView(this);
-        desc.setText("בחר מתי לקבל תזכורת עבור יארצייטים וימי הולדת:");
-        desc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        desc.setTextColor(Color.parseColor("#333333"));
-        desc.setPadding(0, 0, 0, dp(12));
-        inner.addView(desc);
+        inner.addView(createSectionHeader("סוגי התראות פעילות"));
 
         String[] alertOptions = {
                 "✓ תזכורת שבוע לפני התאריך העברי",
@@ -1356,22 +1408,61 @@ public class MainActivity extends Activity {
 
         mainContentContainer.addView(card);
 
+        // About & Offline Card + Copyright
         View aboutCard = createCardView();
         LinearLayout aboutInner = (LinearLayout) aboutCard;
         aboutInner.addView(createSectionHeader("אודות 'זיכרון וברכה'"));
 
         TextView aboutTv = new TextView(this);
-        aboutTv.setText("אפליקציית 'זיכרון וברכה' מותאמת באופן מלא לכל סוגי המכשירים:\n\n• שליטה מלאה גם במסך מגע (טאץ') וגם במקשי ניווט (D-Pad).\n• הגדרת יארצייטים לפי לוח השנה העברי במדויק (יום וחודש עברי).\n• שמות וקשרים בברירת מחדל לאבא ואמא לחיסכון בזמן הקלדה.\n• חישוב פרק תהילים אישי לכל גיל ושיתוף ברכות מרגשות.");
+        aboutTv.setText("• פועל 100% במצב אופליין - ללא צורך בחיבור אינטרנט כלל!\n" +
+                "• שליטה מלאה ונוחה גם במסך מגע (טאץ') וגם במקשי ניווט / מקשים פיזיים.\n" +
+                "• חישוב לוח שנה עברי מובנה ומדויק לכל השנים.\n" +
+                "• מאגר קרובים עשיר: אבא, אמא, אח, אחות, סבא, סבתא, דוד, חבר ועוד.\n" +
+                "• התאמה אישית של שעת ההתראה היומית.");
         aboutTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         aboutTv.setTextColor(Color.parseColor("#4B5563"));
         aboutTv.setLineSpacing(dp(4), 1.25f);
         aboutInner.addView(aboutTv);
 
+        // Requested Copyright line
+        TextView copyrightTv = new TextView(this);
+        copyrightTv.setText("כל הזכויות שמורות שמואל לוי 2026");
+        copyrightTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        copyrightTv.setTypeface(Typeface.DEFAULT_BOLD);
+        copyrightTv.setTextColor(Color.parseColor("#101D33"));
+        copyrightTv.setGravity(Gravity.CENTER);
+        copyrightTv.setPadding(0, dp(16), 0, dp(4));
+        aboutInner.addView(copyrightTv);
+
         mainContentContainer.addView(aboutCard);
     }
 
+    private void showTimeSelectionDialog(final TextView displayTextView) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int curHour = prefs.getInt(PREF_NOTIF_HOUR, 8);
+        int curMin = prefs.getInt(PREF_NOTIF_MINUTE, 0);
+
+        TimePickerDialog timePickerDialog = new TimePickerDialog(this,
+                new TimePickerDialog.OnTimeSetListener() {
+                    @Override
+                    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                        editor.putInt(PREF_NOTIF_HOUR, hourOfDay);
+                        editor.putInt(PREF_NOTIF_MINUTE, minute);
+                        editor.apply();
+
+                        String formatted = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute);
+                        displayTextView.setText("שעת ההתראה הנוכחית: " + formatted);
+                        Toast.makeText(MainActivity.this, "שעת ההתראה נקבעה ל-" + formatted, Toast.LENGTH_SHORT).show();
+                    }
+                }, curHour, curMin, true);
+
+        timePickerDialog.setTitle("בחר שעת התראה");
+        timePickerDialog.show();
+    }
+
     // ========================================================
-    // UI Helpers (Both Touch & Keypad optimized)
+    // UI Helpers
     // ========================================================
     private View createCardView() {
         LinearLayout card = new LinearLayout(this);
@@ -1405,9 +1496,9 @@ public class MainActivity extends Activity {
         b.setTypeface(Typeface.DEFAULT_BOLD);
         b.setTextColor(isGold ? Color.parseColor("#101D33") : Color.WHITE);
         b.setBackgroundResource(isGold ? R.drawable.btn_gold_selector : R.drawable.btn_selector);
-        b.setMinHeight(dp(48)); // Standard touch target size
+        b.setMinHeight(dp(48));
         b.setFocusable(true);
-        b.setFocusableInTouchMode(false); // Responds on 1st touch
+        b.setFocusableInTouchMode(false);
         return b;
     }
 

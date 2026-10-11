@@ -3,36 +3,43 @@
     android:height="96dp"
     android:viewportWidth="96"
     android:viewportHeight="96">
-    <!-- Outer background rounded square -->
+    <!-- Big Round Base Circle (Deep Midnight Navy) -->
     <path
         android:fillColor="#101D33"
-        android:pathData="M18,6 L78,6 A12,12 0 0 1 90,18 L90,78 A12,12 0 0 1 78,90 L18,90 A12,12 0 0 1 6,78 L6,18 A12,12 0 0 1 18,6 Z" />
-    <!-- Regal gold inner frame border -->
+        android:pathData="M48,4 A44,44 0 1,0 48,92 A44,44 0 1,0 48,4 Z" />
+
+    <!-- Regal Circular Gold Outer Ring -->
     <path
         android:fillColor="#D4AF37"
-        android:pathData="M20,12 L76,12 A4,4 0 0 1 80,16 L80,80 A4,4 0 0 1 76,84 L20,84 A4,4 0 0 1 16,80 L16,16 A4,4 0 0 1 20,12 Z M23,15 L23,81 L73,81 L73,15 Z" />
-    <!-- Memorial & Blessing Flame Base (Cup / Menorah stem top) -->
+        android:pathData="M48,7 A41,41 0 1,0 48,89 A41,41 0 1,0 48,7 Z M48,11 A37,37 0 1,1 48,85 A37,37 0 1,1 48,11 Z" />
+
+    <!-- Subtle Inner Shield / Star background accent -->
+    <path
+        android:fillColor="#1A2D4E"
+        android:pathData="M48,22 L56,36 L40,36 Z M48,40 L56,26 L40,26 Z" />
+
+    <!-- Memorial Cup / Flame Base -->
     <path
         android:fillColor="#D4AF37"
-        android:pathData="M34,64 L62,64 A3,3 0 0 1 65,67 L65,73 A3,3 0 0 1 62,76 L34,76 A3,3 0 0 1 31,73 L31,67 A3,3 0 0 1 34,64 Z" />
-    <!-- Candle Body -->
+        android:pathData="M32,65 L64,65 A4,4 0 0 1 68,69 L68,75 A4,4 0 0 1 64,79 L32,79 A4,4 0 0 1 28,75 L28,69 A4,4 0 0 1 32,65 Z" />
+
+    <!-- Candle Body (Warm White) -->
     <path
-        android:fillColor="#F6F7F9"
-        android:pathData="M41,45 L55,45 A2,2 0 0 1 57,47 L57,64 L39,64 L39,47 A2,2 0 0 1 41,45 Z" />
+        android:fillColor="#F6F7FB"
+        android:pathData="M40,45 L56,45 A3,3 0 0 1 59,48 L59,65 L37,65 L37,48 A3,3 0 0 1 40,45 Z" />
+
     <!-- Candle Wick -->
     <path
-        android:fillColor="#5A677D"
-        android:pathData="M47,40 L49,40 L49,45 L47,45 Z" />
-    <!-- Golden Flame Outer -->
+        android:fillColor="#475569"
+        android:pathData="M47,39 L49,39 L49,45 L47,45 Z" />
+
+    <!-- Outer Golden Sacred Flame -->
     <path
-        android:fillColor="#FFC83B"
-        android:pathData="M48,18 C40,26 38,33 41,39 C43,43 53,43 55,39 C58,33 56,26 48,18 Z" />
-    <!-- Inner Warm Flame Core -->
+        android:fillColor="#FFB703"
+        android:pathData="M48,17 C39,26 37,34 40,40 C43,45 53,45 56,40 C59,34 57,26 48,17 Z" />
+
+    <!-- Bright Warm Core Flame -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M48,25 C44,30 43,34 45,37 C46,39 50,39 51,37 C53,34 52,30 48,25 Z" />
-    <!-- Jewish Star / Magen David Accent Silhouette in Background -->
-    <path
-        android:fillColor="#24375A"
-        android:pathData="M48,28 L54,38 L42,38 Z M48,42 L54,32 L42,32 Z" />
+        android:fillColor="#FFFBEA"
+        android:pathData="M48,24 C44,30 43,35 45,38 C46,40 50,40 51,38 C53,35 52,30 48,24 Z" />
 </vector>
