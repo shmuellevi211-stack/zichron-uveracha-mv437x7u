@@ -14,38 +14,23 @@ public class HebrewDateUtil {
             "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"
     };
 
-    // Hebrew representation of numbers 1-30
+    // Hebrew days representations 1 through 30
+    public static final String[] HEBREW_DAYS = {
+            "א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ז'", "ח'", "ט'", "י'",
+            "י\"א", "י\"ב", "י\"ג", "י\"ד", "ט\"ו", "ט\"ז", "י\"ז", "י\"ח", "י\"ט", "כ'",
+            "כ\"א", "כ\"ב", "כ\"ג", "כ\"ד", "כ\"ה", "כ\"ו", "כ\"ז", "כ\"ח", "כ\"ט", "ל'"
+    };
+
     public static String toHebrewNumber(int n) {
-        if (n <= 0 || n > 30) return String.valueOf(n);
-        String[] ones = {"", "א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ז'", "ח'", "ט'"};
-        if (n < 10) return ones[n];
-        if (n == 10) return "י'";
-        if (n == 11) return "י\"א";
-        if (n == 12) return "י\"ב";
-        if (n == 13) return "י\"ג";
-        if (n == 14) return "י\"ד";
-        if (n == 15) return "ט\"ו";
-        if (n == 16) return "ט\"ז";
-        if (n == 17) return "י\"ז";
-        if (n == 18) return "י\"ח";
-        if (n == 19) return "י\"ט";
-        if (n == 20) return "כ'";
-        if (n == 21) return "כ\"א";
-        if (n == 22) return "כ\"ב";
-        if (n == 23) return "כ\"ג";
-        if (n == 24) return "כ\"ד";
-        if (n == 25) return "כ\"ה";
-        if (n == 26) return "כ\"ו";
-        if (n == 27) return "כ\"ז";
-        if (n == 28) return "כ\"ח";
-        if (n == 29) return "כ\"ט";
-        if (n == 30) return "ל'";
+        if (n >= 1 && n <= 30) {
+            return HEBREW_DAYS[n - 1];
+        }
         return String.valueOf(n);
     }
 
     public static class HebrewDate {
         public int day;
-        public int monthIndex; // 0: Tishrei, 1: Cheshvan, ... 8: Nisan, etc.
+        public int monthIndex; // 0: Tishrei, 1: Cheshvan, ...
         public int year;
 
         public HebrewDate(int d, int m, int y) {
@@ -67,18 +52,19 @@ public class HebrewDateUtil {
     }
 
     public static String formatHebrewYear(int year) {
-        // e.g., 5785 -> תשפ"ה
         int mod = year % 1000;
-        if (mod == 785) return "תשפ\"ה";
+        if (mod == 780) return "תש\"פ";
+        if (mod == 781) return "תשפ\"א";
+        if (mod == 782) return "תשפ\"ב";
+        if (mod == 783) return "תשפ\"ג";
         if (mod == 784) return "תשפ\"ד";
+        if (mod == 785) return "תשפ\"ה";
         if (mod == 786) return "תשפ\"ו";
         if (mod == 787) return "תשפ\"ז";
+        if (mod == 788) return "תשפ\"ח";
         return "תשפ\"ה";
     }
 
-    /**
-     * Converts a Julian Day Number (JDN) to Gregorian Date
-     */
     private static long gregorianToJdn(int year, int month, int day) {
         int a = (14 - month) / 12;
         int y = year + 4800 - a;
@@ -86,22 +72,17 @@ public class HebrewDateUtil {
         return day + (153 * m + 2) / 5 + 365L * y + y / 4 - y / 100 + y / 400 - 32045;
     }
 
-    /**
-     * Basic Jewish calendar conversion: calculates Molad of Tishrei for year
-     */
     private static boolean isHebrewLeapYear(int hYear) {
         return ((7 * hYear + 1) % 19) < 7;
     }
 
     private static long roshHashanaJdn(int hYear) {
-        // Molad calculation
         long months = (235L * hYear - 234) / 19;
         long parts = 12084 + 13753 * months;
         long day = 29 * months + parts / 25920;
         parts %= 25920;
 
-        // Postponements (Dechiyot)
-        long dayOfWeek = (day + 1) % 7; // 0 Sunday .. 6 Saturday
+        long dayOfWeek = (day + 1) % 7;
         if (parts >= 19440 ||
                 (dayOfWeek == 2 && parts >= 9924 && !isHebrewLeapYear(hYear)) ||
                 (dayOfWeek == 1 && parts >= 16789 && isHebrewLeapYear(hYear - 1))) {
@@ -109,17 +90,15 @@ public class HebrewDateUtil {
             dayOfWeek = (dayOfWeek + 1) % 7;
         }
 
-        // Rosh Hashana cannot fall on Sun(0), Wed(3), Fri(5)
         if (dayOfWeek == 0 || dayOfWeek == 3 || dayOfWeek == 5) {
             day++;
         }
-        return day + 347997; // base offset to match JDN
+        return day + 347997;
     }
 
     public static HebrewDate getHebrewDate(int gYear, int gMonth, int gDay) {
         long jdn = gregorianToJdn(gYear, gMonth, gDay);
 
-        // Approximate Hebrew year
         int hYear = gYear + 3760;
         if (roshHashanaJdn(hYear + 1) <= jdn) {
             hYear++;
@@ -140,34 +119,34 @@ public class HebrewDateUtil {
         int[] monthDays;
         if (!leap) {
             monthDays = new int[]{
-                    30, // Tishrei
-                    cheshvanLong ? 30 : 29, // Cheshvan
-                    kislevShort ? 29 : 30, // Kislev
-                    29, // Tevet
-                    30, // Shevat
-                    29, // Adar
-                    30, // Nisan
-                    29, // Iyyar
-                    30, // Sivan
-                    29, // Tammuz
-                    30, // Av
-                    29  // Elul
+                    30,
+                    cheshvanLong ? 30 : 29,
+                    kislevShort ? 29 : 30,
+                    29,
+                    30,
+                    29,
+                    30,
+                    29,
+                    30,
+                    29,
+                    30,
+                    29
             };
         } else {
             monthDays = new int[]{
-                    30, // Tishrei
-                    cheshvanLong ? 30 : 29, // Cheshvan
-                    kislevShort ? 29 : 30, // Kislev
-                    29, // Tevet
-                    30, // Shevat
-                    30, // Adar I
-                    29, // Adar II
-                    30, // Nisan
-                    29, // Iyyar
-                    30, // Sivan
-                    29, // Tammuz
-                    30, // Av
-                    29  // Elul
+                    30,
+                    cheshvanLong ? 30 : 29,
+                    kislevShort ? 29 : 30,
+                    29,
+                    30,
+                    30,
+                    29,
+                    30,
+                    29,
+                    30,
+                    29,
+                    30,
+                    29
             };
         }
 
@@ -182,15 +161,13 @@ public class HebrewDateUtil {
         }
 
         int hDay = d + 1;
-        // Map to our HEBREW_MONTHS names
         int nameIdx = mIdx;
         if (!leap && mIdx >= 5) {
-            // normal adar is at index 5 in our list
             if (mIdx == 5) nameIdx = 5;
-            else nameIdx = mIdx + 2; // Nisan -> index 8, etc.
+            else nameIdx = mIdx + 2;
         } else if (leap && mIdx >= 5) {
-            if (mIdx == 5) nameIdx = 6; // Adar A
-            else if (mIdx == 6) nameIdx = 7; // Adar B
+            if (mIdx == 5) nameIdx = 6;
+            else if (mIdx == 6) nameIdx = 7;
             else nameIdx = mIdx + 1;
         }
 
@@ -212,7 +189,7 @@ public class HebrewDateUtil {
             if (d == 3) return "צום גדליה";
             if (d == 10) return "יום הכיפורים";
             if (d >= 15 && d <= 21) return "חג הסוכות";
-            if (d == 22) return "שמיני עצרת וסוכות";
+            if (d == 22) return "שמיני עצרת ושמחת תורה";
         } else if (m.equals("כסלו")) {
             if (d >= 25) return "חנוכה";
         } else if (m.equals("טבת")) {

@@ -16,11 +16,13 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,7 +31,6 @@ import java.util.List;
 
 public class MainActivity extends Activity {
 
-    // Tab Constants
     private static final int TAB_HOME = 0;
     private static final int TAB_CALENDAR = 1;
     private static final int TAB_YAHRZEITS = 2;
@@ -48,7 +49,6 @@ public class MainActivity extends Activity {
     private int calYear;
     private int calMonth; // 0-11
 
-    // Tehillim Chapters collection
     private static final String[] TEHILLIM_TITLES = {
             "פרק כ\"ג - ה' רֹעִי לֹא אֶחְסָר",
             "פרק קכ\"א - שִׁיר לַמַּעֲלוֹת אֶשָּׂא עֵינַי",
@@ -89,11 +89,11 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
-        // Header View
+        // Header
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setBackgroundColor(Color.parseColor("#1A2A44"));
-        header.setPadding(dp(16), dp(14), dp(16), dp(14));
+        header.setBackgroundColor(Color.parseColor("#101D33"));
+        header.setPadding(dp(18), dp(16), dp(18), dp(16));
         header.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView titleView = new TextView(this);
@@ -112,14 +112,14 @@ public class MainActivity extends Activity {
 
         root.addView(header);
 
-        // Tab Navigation Bar with horizontal scrolling for keypad/dpad
+        // Responsive touch & keypad Tab Bar
         HorizontalScrollView tabScroll = new HorizontalScrollView(this);
         tabScroll.setHorizontalScrollBarEnabled(false);
         tabScroll.setBackgroundColor(Color.parseColor("#152238"));
 
         tabStripLayout = new LinearLayout(this);
         tabStripLayout.setOrientation(LinearLayout.HORIZONTAL);
-        tabStripLayout.setPadding(dp(6), dp(6), dp(6), dp(6));
+        tabStripLayout.setPadding(dp(8), dp(8), dp(8), dp(8));
 
         String[] tabNames = {
                 "בית",
@@ -139,8 +139,11 @@ public class MainActivity extends Activity {
             b.setTypeface(Typeface.DEFAULT_BOLD);
             b.setTextColor(Color.WHITE);
             b.setBackgroundResource(R.drawable.tab_item_selector);
+            // Touch & Keypad optimized: focusable for D-pad, NOT focusableInTouchMode so 1-touch responds immediately!
             b.setFocusable(true);
-            b.setFocusableInTouchMode(true);
+            b.setFocusableInTouchMode(false);
+            b.setMinHeight(dp(48));
+
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
@@ -160,21 +163,18 @@ public class MainActivity extends Activity {
         tabScroll.addView(tabStripLayout);
         root.addView(tabScroll);
 
-        // Scrollable content area
+        // Content Area
         ScrollView scroller = new ScrollView(this);
         scroller.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0, 1f
-        ));
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         scroller.setFillViewport(true);
 
         mainContentContainer = new LinearLayout(this);
         mainContentContainer.setOrientation(LinearLayout.VERTICAL);
-        mainContentContainer.setPadding(dp(16), dp(16), dp(16), dp(24));
+        mainContentContainer.setPadding(dp(16), dp(16), dp(16), dp(28));
         scroller.addView(mainContentContainer);
 
         root.addView(scroller);
-
         setContentView(root);
     }
 
@@ -208,7 +208,7 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // SCREEN 1: מסך בית (Home)
+    // TAB 1: בית (Home)
     // ========================================================
     private void renderHomeScreen() {
         HebrewDateUtil.HebrewDate hebToday = HebrewDateUtil.getTodayHebrew();
@@ -228,7 +228,7 @@ public class MainActivity extends Activity {
         hebDateText.setText(hebToday.formatHebrewDate());
         hebDateText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
         hebDateText.setTypeface(Typeface.DEFAULT_BOLD);
-        hebDateText.setTextColor(Color.parseColor("#1A2A44"));
+        hebDateText.setTextColor(Color.parseColor("#101D33"));
         hebDateText.setPadding(0, dp(4), 0, dp(4));
         dateInner.addView(hebDateText);
 
@@ -252,15 +252,45 @@ public class MainActivity extends Activity {
         }
         mainContentContainer.addView(dateCard);
 
-        // Personal Tehillim Chapter Card
+        // Quick Action Shortcuts for Touch & Keypad
+        LinearLayout actionRow = new LinearLayout(this);
+        actionRow.setOrientation(LinearLayout.HORIZONTAL);
+        actionRow.setPadding(0, 0, 0, dp(14));
+
+        Button addYahHome = createFocusableButton("+ יארצייט עברי", true);
+        addYahHome.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        addYahHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAddYahrzeitDialog(null);
+            }
+        });
+        actionRow.addView(addYahHome);
+
+        View gap = new View(this);
+        gap.setLayoutParams(new LinearLayout.LayoutParams(dp(10), ViewGroup.LayoutParams.MATCH_PARENT));
+        actionRow.addView(gap);
+
+        Button addFamHome = createFocusableButton("+ בן משפחה", false);
+        addFamHome.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        addFamHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAddFamilyDialog(null);
+            }
+        });
+        actionRow.addView(addFamHome);
+
+        mainContentContainer.addView(actionRow);
+
+        // Personal Tehillim Chapter
         View tehillimCard = createCardView();
         LinearLayout tehillimInner = (LinearLayout) tehillimCard;
 
-        TextView tehillimTitle = createSectionHeader("הפרק האישי שלך לשנה זו");
-        tehillimInner.addView(tehillimTitle);
+        tehillimInner.addView(createSectionHeader("הפרק האישי שלך לשנה זו"));
 
         TextView tehillimDesc = new TextView(this);
-        tehillimDesc.setText("על פי מנהג ישראל, אומר אדם את מזמור התהילים המתאים לגילו + 1. הוסף את גילך למטה כדי לקרוא את מזמורך האישי:");
+        tehillimDesc.setText("על פי מנהג ישראל, אומר אדם את מזמור התהילים המתאים לגילו + 1. הקלד את הגיל לקבלת המזמור:");
         tehillimDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         tehillimDesc.setTextColor(Color.parseColor("#333333"));
         tehillimDesc.setPadding(0, 0, 0, dp(8));
@@ -271,11 +301,11 @@ public class MainActivity extends Activity {
         ageRow.setGravity(Gravity.CENTER_VERTICAL);
 
         final EditText ageInput = new EditText(this);
-        ageInput.setHint("גילך (למשל: 40)");
+        ageInput.setHint("לדוגמה: 40");
         ageInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         ageInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         ageInput.setBackgroundResource(R.drawable.input_selector);
-        ageInput.setFocusable(true);
+        ageInput.setMinHeight(dp(48));
         ageInput.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         ageRow.addView(ageInput);
 
@@ -290,7 +320,7 @@ public class MainActivity extends Activity {
 
         final TextView personalResult = new TextView(this);
         personalResult.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        personalResult.setTextColor(Color.parseColor("#1A2A44"));
+        personalResult.setTextColor(Color.parseColor("#101D33"));
         personalResult.setTypeface(Typeface.DEFAULT_BOLD);
         personalResult.setPadding(0, dp(8), 0, 0);
         tehillimInner.addView(personalResult);
@@ -303,7 +333,7 @@ public class MainActivity extends Activity {
                     try {
                         int age = Integer.parseInt(val);
                         int chapter = age + 1;
-                        personalResult.setText("הפרק האישי שלך לשנה זו הוא: מזמור " + HebrewDateUtil.toHebrewNumber(chapter) + " (פרק " + chapter + ")");
+                        personalResult.setText("הפרק האישי שלך: מזמור " + HebrewDateUtil.toHebrewNumber(chapter) + " (פרק " + chapter + ")");
                     } catch (Exception ex) {
                         personalResult.setText("נא להזין מספר תקין");
                     }
@@ -327,17 +357,19 @@ public class MainActivity extends Activity {
             yahInner.addView(emptyYah);
         } else {
             for (DatabaseHelper.Yahrzeit y : yList) {
+                String monthName = (y.hMonth >= 0 && y.hMonth < HebrewDateUtil.HEBREW_MONTHS.length)
+                        ? HebrewDateUtil.HEBREW_MONTHS[y.hMonth] : "";
                 View item = createFocusableRow(
                         "🕯 " + y.getFullName() + " (" + y.getMemorialTitle() + ")",
-                        "תאריך פטירה: " + HebrewDateUtil.toHebrewNumber(y.hDay) + " ב" + HebrewDateUtil.HEBREW_MONTHS[y.hMonth] +
-                                " | הערות: " + (y.notes.isEmpty() ? "אין" : y.notes)
+                        "תאריך עברי: " + HebrewDateUtil.toHebrewNumber(y.hDay) + " ב" + monthName +
+                                (y.notes != null && !y.notes.isEmpty() ? " | " + y.notes : "")
                 );
                 yahInner.addView(item);
             }
         }
         mainContentContainer.addView(yahrzeitSection);
 
-        // Upcoming Birthdays
+        // Upcoming Family Birthdays
         View bdaySection = createCardView();
         LinearLayout bdayInner = (LinearLayout) bdaySection;
         bdayInner.addView(createSectionHeader("ימי הולדת קרובים"));
@@ -345,7 +377,7 @@ public class MainActivity extends Activity {
         List<DatabaseHelper.Member> mList = dbHelper.getAllMembers();
         if (mList.isEmpty()) {
             TextView emptyBday = new TextView(this);
-            emptyBday.setText("אין ימי הולדת רשומים כרגע");
+            emptyBday.setText("אין בני משפחה רשומים כרגע");
             emptyBday.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
             emptyBday.setTextColor(Color.GRAY);
             bdayInner.addView(emptyBday);
@@ -355,7 +387,6 @@ public class MainActivity extends Activity {
                         "🎂 " + m.name + " (" + m.relation + ") - בן/בת " + m.getAge(),
                         "תאריך: " + m.day + "/" + m.month + "/" + m.year + " (" + m.hebrewDate + ") | פרק תהילים אישי: " + m.getPersonalTehillim()
                 );
-                // Share blessing button
                 Button shareBtn = createFocusableButton("ברכה מוכנה", true);
                 shareBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
                 shareBtn.setOnClickListener(new View.OnClickListener() {
@@ -385,13 +416,13 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // SCREEN 2: לוח שנה (Calendar)
+    // TAB 2: לוח שנה (Calendar)
     // ========================================================
     private void renderCalendarScreen() {
         View calCard = createCardView();
         LinearLayout calInner = (LinearLayout) calCard;
 
-        // Month Switcher Bar
+        // Month Bar
         LinearLayout navBar = new LinearLayout(this);
         navBar.setOrientation(LinearLayout.HORIZONTAL);
         navBar.setGravity(Gravity.CENTER_VERTICAL);
@@ -414,7 +445,7 @@ public class MainActivity extends Activity {
         monthTitle.setText(HebrewDateUtil.GREGORIAN_MONTHS_HEB[calMonth] + " " + calYear);
         monthTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
         monthTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        monthTitle.setTextColor(Color.parseColor("#1A2A44"));
+        monthTitle.setTextColor(Color.parseColor("#101D33"));
         monthTitle.setGravity(Gravity.CENTER);
         monthTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         navBar.addView(monthTitle);
@@ -435,10 +466,10 @@ public class MainActivity extends Activity {
 
         calInner.addView(navBar);
 
-        // Days Header
+        // Weekday Headers
         LinearLayout daysHeader = new LinearLayout(this);
         daysHeader.setOrientation(LinearLayout.HORIZONTAL);
-        daysHeader.setPadding(0, dp(12), 0, dp(6));
+        daysHeader.setPadding(0, dp(14), 0, dp(8));
         String[] daysOfWeek = {"א'", "ב'", "ג'", "ד'", "ה'", "ו'", "שבת"};
         for (String dow : daysOfWeek) {
             TextView tv = new TextView(this);
@@ -452,23 +483,22 @@ public class MainActivity extends Activity {
         }
         calInner.addView(daysHeader);
 
-        // Calendar Grid Days Calculation
+        // Calendar Grid
         Calendar cal = Calendar.getInstance();
         cal.set(Calendar.YEAR, calYear);
         cal.set(Calendar.MONTH, calMonth);
         cal.set(Calendar.DAY_OF_MONTH, 1);
 
-        int firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK); // 1 = Sunday
+        int firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
         int maxDaysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
 
         LinearLayout weekRow = new LinearLayout(this);
         weekRow.setOrientation(LinearLayout.HORIZONTAL);
 
         int currentCell = 1;
-        // Empty days before day 1
         for (int i = 1; i < firstDayOfWeek; i++) {
             View emptyCell = new View(this);
-            emptyCell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(65), 1f));
+            emptyCell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(64), 1f));
             weekRow.addView(emptyCell);
             currentCell++;
         }
@@ -480,7 +510,6 @@ public class MainActivity extends Activity {
             HebrewDateUtil.HebrewDate hd = HebrewDateUtil.getHebrewDate(calYear, calMonth + 1, day);
             String holiday = HebrewDateUtil.getHolidayOrSpecialDay(hd);
 
-            // Check if Yahrzeit or Birthday falls on this day
             boolean hasYahrzeit = false;
             for (DatabaseHelper.Yahrzeit y : yList) {
                 if (y.hDay == hd.day && y.hMonth == hd.monthIndex) {
@@ -503,7 +532,7 @@ public class MainActivity extends Activity {
 
             Button cell = new Button(this);
             cell.setFocusable(true);
-            cell.setFocusableInTouchMode(true);
+            cell.setFocusableInTouchMode(false); // Touch reacts on 1st tap
             cell.setBackgroundResource(R.drawable.card_selector);
             cell.setPadding(dp(2), dp(2), dp(2), dp(2));
 
@@ -514,13 +543,12 @@ public class MainActivity extends Activity {
 
             cell.setText(text);
             cell.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            cell.setTextColor(Color.parseColor("#1A2A44"));
+            cell.setTextColor(Color.parseColor("#101D33"));
             if (currentCell % 7 == 0) {
-                // Saturday
                 cell.setTextColor(Color.parseColor("#B8860B"));
             }
 
-            cell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(65), 1f));
+            cell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(64), 1f));
             cell.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -538,10 +566,9 @@ public class MainActivity extends Activity {
             currentCell++;
         }
 
-        // Finish last row
         while (currentCell % 7 != 1) {
             View emptyCell = new View(this);
-            emptyCell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(65), 1f));
+            emptyCell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(64), 1f));
             weekRow.addView(emptyCell);
             currentCell++;
         }
@@ -559,12 +586,11 @@ public class MainActivity extends Activity {
             sb.append("אירוע: ").append(holiday).append("\n\n");
         }
 
-        // Look for personal events
         List<DatabaseHelper.Yahrzeit> yList = dbHelper.getAllYahrzeits();
         for (DatabaseHelper.Yahrzeit y : yList) {
             if (y.hDay == hd.day && y.hMonth == hd.monthIndex) {
                 sb.append("🕯 יארצייט: ").append(y.getFullName()).append(" (").append(y.getMemorialTitle()).append(")\n");
-                if (!y.notes.isEmpty()) sb.append("הערה: ").append(y.notes).append("\n");
+                if (y.notes != null && !y.notes.isEmpty()) sb.append("הערה: ").append(y.notes).append("\n");
             }
         }
 
@@ -577,7 +603,7 @@ public class MainActivity extends Activity {
         }
 
         if (sb.length() == 0) {
-            sb.append("אין אירועים מיוחדים בתאריך זה.");
+            sb.append("אין אירועים שמורים בתאריך זה.");
         }
 
         builder.setMessage(sb.toString().trim());
@@ -586,21 +612,53 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // SCREEN 3: יארצייטים (Yahrzeits)
+    // TAB 3: יארצייטים (Yahrzeits) - Hebrew Date input & Default "אבא" / "אמא"
     // ========================================================
     private void renderYahrzeitsScreen() {
-        Button addBtn = createFocusableButton("+ הוסף יארצייט חדש", true);
-        addBtn.setOnClickListener(new View.OnClickListener() {
+        // Quick Presets Row for "אבא" and "אמא"
+        LinearLayout quickAddBar = new LinearLayout(this);
+        quickAddBar.setOrientation(LinearLayout.HORIZONTAL);
+        quickAddBar.setPadding(0, 0, 0, dp(12));
+
+        Button addDadBtn = createFocusableButton("+ יארצייט עבור אבא", true);
+        addDadBtn.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        addDadBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showAddYahrzeitDialog();
+                showAddYahrzeitDialog("אבא");
             }
         });
-        mainContentContainer.addView(addBtn);
+        quickAddBar.addView(addDadBtn);
 
+        View g1 = new View(this);
+        g1.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
+        quickAddBar.addView(g1);
+
+        Button addMomBtn = createFocusableButton("+ יארצייט עבור אמא", true);
+        addMomBtn.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        addMomBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAddYahrzeitDialog("אמא");
+            }
+        });
+        quickAddBar.addView(addMomBtn);
+
+        mainContentContainer.addView(quickAddBar);
+
+        Button addCustomBtn = createFocusableButton("+ הוסף יארצייט חדש", false);
+        addCustomBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAddYahrzeitDialog(null);
+            }
+        });
+        mainContentContainer.addView(addCustomBtn);
+
+        // List
         View listCard = createCardView();
         LinearLayout listInner = (LinearLayout) listCard;
-        listInner.addView(createSectionHeader("רשימת יארצייטים שנתית"));
+        listInner.addView(createSectionHeader("רשימת יארצייטים (לפי תאריך עברי)"));
 
         List<DatabaseHelper.Yahrzeit> list = dbHelper.getAllYahrzeits();
         if (list.isEmpty()) {
@@ -611,11 +669,17 @@ public class MainActivity extends Activity {
             listInner.addView(tv);
         } else {
             for (final DatabaseHelper.Yahrzeit y : list) {
+                String monthName = (y.hMonth >= 0 && y.hMonth < HebrewDateUtil.HEBREW_MONTHS.length)
+                        ? HebrewDateUtil.HEBREW_MONTHS[y.hMonth] : "";
+                String hebDateFormatted = HebrewDateUtil.toHebrewNumber(y.hDay) + " ב" + monthName;
+                if (y.hYear > 0) {
+                    hebDateFormatted += " " + HebrewDateUtil.formatHebrewYear(y.hYear);
+                }
+
                 LinearLayout row = (LinearLayout) createFocusableRow(
                         "🕯 " + y.getFullName() + " (" + y.getMemorialTitle() + ")",
-                        "יום השנה: " + HebrewDateUtil.toHebrewNumber(y.hDay) + " ב" + HebrewDateUtil.HEBREW_MONTHS[y.hMonth] +
-                                " | לועזי: " + y.gDay + "/" + y.gMonth + "/" + y.gYear + "\n" +
-                                (y.notes.isEmpty() ? "" : "הערות: " + y.notes)
+                        "תאריך עברי: " + hebDateFormatted +
+                                (y.notes != null && !y.notes.isEmpty() ? "\nהערות: " + y.notes : "")
                 );
 
                 Button delBtn = createFocusableButton("מחק", false);
@@ -634,55 +698,191 @@ public class MainActivity extends Activity {
         mainContentContainer.addView(listCard);
     }
 
-    private void showAddYahrzeitDialog() {
+    // Hebrew date picker dialog with default "אבא" / "אמא"
+    private void showAddYahrzeitDialog(String defaultRole) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("הוספת יארצייט");
+        builder.setTitle("הוספת יארצייט - תאריך עברי");
 
         ScrollView sv = new ScrollView(this);
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(dp(20), dp(10), dp(20), dp(10));
 
+        // Quick Preset Selector Row
+        TextView presetLabel = new TextView(this);
+        presetLabel.setText("בחירה מהירה:");
+        presetLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        presetLabel.setTextColor(Color.parseColor("#4B5563"));
+        layout.addView(presetLabel);
+
+        LinearLayout chipsRow = new LinearLayout(this);
+        chipsRow.setOrientation(LinearLayout.HORIZONTAL);
+        chipsRow.setPadding(0, dp(4), 0, dp(10));
+
+        Button chipDad = createChipButton("אבא");
+        Button chipMom = createChipButton("אמא");
+        Button chipOther = createChipButton("קרוב אחר");
+        chipsRow.addView(chipDad);
+
+        View chipSpacer = new View(this);
+        chipSpacer.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
+        chipsRow.addView(chipSpacer);
+        chipsRow.addView(chipMom);
+
+        View chipSpacer2 = new View(this);
+        chipSpacer2.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
+        chipsRow.addView(chipSpacer2);
+        chipsRow.addView(chipOther);
+
+        layout.addView(chipsRow);
+
         final EditText etFirst = createLabeledInput(layout, "שם פרטי של הנפטר/ת:");
         final EditText etLast = createLabeledInput(layout, "שם משפחה:");
-        final EditText etParent = createLabeledInput(layout, "שם האב או האם (בן/בת):");
+        final EditText etParent = createLabeledInput(layout, "שם ההורה (בן / בת):");
 
-        final EditText etGDay = createLabeledInput(layout, "יום פטירה (1-31):");
-        etGDay.setInputType(InputType.TYPE_CLASS_NUMBER);
-        final EditText etGMonth = createLabeledInput(layout, "חודש פטירה (1-12):");
-        etGMonth.setInputType(InputType.TYPE_CLASS_NUMBER);
-        final EditText etGYear = createLabeledInput(layout, "שנת פטירה לועזית (למשל 2015):");
-        etGYear.setInputType(InputType.TYPE_CLASS_NUMBER);
+        // Apply defaults
+        final boolean[] isFather = new boolean[]{true};
+        if ("אבא".equals(defaultRole)) {
+            etFirst.setText("אבא מורי");
+            isFather[0] = true;
+        } else if ("אמא".equals(defaultRole)) {
+            etFirst.setText("אמי מורתי");
+            isFather[0] = false;
+        } else {
+            // Default name prefilled to "אבא" as requested
+            etFirst.setText("אבא");
+            isFather[0] = true;
+        }
 
-        final EditText etNotes = createLabeledInput(layout, "הערות / מנהגים / קדיש:");
+        chipDad.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                etFirst.setText("אבא מורי");
+                isFather[0] = true;
+            }
+        });
+        chipMom.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                etFirst.setText("אמי מורתי");
+                isFather[0] = false;
+            }
+        });
+        chipOther.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                etFirst.setText("");
+            }
+        });
+
+        // HEBREW DATE SELECTION
+        TextView hebDateHeader = new TextView(this);
+        hebDateHeader.setText("תאריך עברי של היארצייט:");
+        hebDateHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        hebDateHeader.setTypeface(Typeface.DEFAULT_BOLD);
+        hebDateHeader.setTextColor(Color.parseColor("#101D33"));
+        hebDateHeader.setPadding(0, dp(12), 0, dp(4));
+        layout.addView(hebDateHeader);
+
+        // Spinner for Hebrew Day (א' - ל')
+        TextView dayLabel = new TextView(this);
+        dayLabel.setText("יום בחודש (עברי):");
+        dayLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        dayLabel.setTextColor(Color.parseColor("#333333"));
+        layout.addView(dayLabel);
+
+        final Spinner daySpinner = new Spinner(this);
+        daySpinner.setBackgroundResource(R.drawable.spinner_background);
+        daySpinner.setMinimumHeight(dp(48));
+        ArrayAdapter<String> dayAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_dropdown_item, HebrewDateUtil.HEBREW_DAYS);
+        daySpinner.setAdapter(dayAdapter);
+        // Default to today's Hebrew day
+        HebrewDateUtil.HebrewDate todayHeb = HebrewDateUtil.getTodayHebrew();
+        if (todayHeb.day >= 1 && todayHeb.day <= 30) {
+            daySpinner.setSelection(todayHeb.day - 1);
+        }
+        layout.addView(daySpinner);
+
+        // Spinner for Hebrew Month (תשרי - אלול)
+        TextView monthLabel = new TextView(this);
+        monthLabel.setText("חודש עברי:");
+        monthLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        monthLabel.setTextColor(Color.parseColor("#333333"));
+        monthLabel.setPadding(0, dp(8), 0, dp(2));
+        layout.addView(monthLabel);
+
+        final Spinner monthSpinner = new Spinner(this);
+        monthSpinner.setBackgroundResource(R.drawable.spinner_background);
+        monthSpinner.setMinimumHeight(dp(48));
+        ArrayAdapter<String> monthAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_dropdown_item, HebrewDateUtil.HEBREW_MONTHS);
+        monthSpinner.setAdapter(monthAdapter);
+        if (todayHeb.monthIndex >= 0 && todayHeb.monthIndex < HebrewDateUtil.HEBREW_MONTHS.length) {
+            monthSpinner.setSelection(todayHeb.monthIndex);
+        }
+        layout.addView(monthSpinner);
+
+        // Hebrew Year input
+        final EditText etHYear = createLabeledInput(layout, "שנת פטירה עברית (למשל: תשפ\"ד או מספר 5784):");
+        etHYear.setText(HebrewDateUtil.formatHebrewYear(todayHeb.year));
+
+        final EditText etNotes = createLabeledInput(layout, "הערות / מנהגים (קדיש, הדלקת נר, לימוד משניות):");
+        etNotes.setText("להדליק נר נשמה, לומר קדיש");
 
         sv.addView(layout);
         builder.setView(sv);
 
-        builder.setPositiveButton("שמור", new DialogInterface.OnClickListener() {
+        builder.setPositiveButton("שמור יארצייט", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 String fn = etFirst.getText().toString().trim();
                 String ln = etLast.getText().toString().trim();
                 String pr = etParent.getText().toString().trim();
                 if (fn.isEmpty()) {
-                    Toast.makeText(MainActivity.this, "נא להזין שם פרטי", Toast.LENGTH_SHORT).show();
-                    return;
+                    fn = "אבא"; // Default fallback
                 }
 
-                int gd = parseIntSafe(etGDay.getText().toString(), 1);
-                int gm = parseIntSafe(etGMonth.getText().toString(), 1);
-                int gy = parseIntSafe(etGYear.getText().toString(), 2020);
+                int chosenHebDay = daySpinner.getSelectedItemPosition() + 1;
+                int chosenHebMonth = monthSpinner.getSelectedItemPosition();
 
-                HebrewDateUtil.HebrewDate hd = HebrewDateUtil.getHebrewDate(gy, gm, gd);
+                String yrInput = etHYear.getText().toString().trim();
+                int chosenHebYear = parseHebrewYearNumber(yrInput);
 
-                dbHelper.insertYahrzeit(fn, ln, pr, true, gd, gm, gy, hd.day, hd.monthIndex, hd.year, etNotes.getText().toString().trim());
-                Toast.makeText(MainActivity.this, "נשמר בהצלחה", Toast.LENGTH_SHORT).show();
+                dbHelper.insertYahrzeit(
+                        fn,
+                        ln,
+                        pr.isEmpty() ? "פלוני" : pr,
+                        isFather[0],
+                        0, 0, 0, // Hebrew date is primary
+                        chosenHebDay,
+                        chosenHebMonth,
+                        chosenHebYear,
+                        etNotes.getText().toString().trim()
+                );
+
+                Toast.makeText(MainActivity.this, "היארצייט נשמר בהצלחה!", Toast.LENGTH_SHORT).show();
                 switchTab(TAB_YAHRZEITS);
             }
         });
         builder.setNegativeButton("ביטול", null);
         builder.show();
+    }
+
+    private int parseHebrewYearNumber(String input) {
+        if (input == null || input.isEmpty()) return 5785;
+        try {
+            return Integer.parseInt(input);
+        } catch (Exception e) {
+            if (input.contains("תשפ\"ה")) return 5785;
+            if (input.contains("תשפ\"ד")) return 5784;
+            if (input.contains("תשפ\"ו")) return 5786;
+            if (input.contains("תשפ\"ג")) return 5783;
+            if (input.contains("תשפ\"ב")) return 5782;
+            if (input.contains("תשפ\"א")) return 5781;
+            if (input.contains("תש\"פ")) return 5780;
+            return 5785;
+        }
     }
 
     private void confirmDeleteYahrzeit(final DatabaseHelper.Yahrzeit y) {
@@ -701,17 +901,48 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // SCREEN 4: ספר משפחה וימי הולדת (Family Book)
+    // TAB 4: ספר משפחה (Family Book) - Default "אבא" ו"אמא"
     // ========================================================
     private void renderFamilyScreen() {
-        Button addBtn = createFocusableButton("+ הוסף בן משפחה", true);
-        addBtn.setOnClickListener(new View.OnClickListener() {
+        // Quick Presets Row for "אבא" and "אמא"
+        LinearLayout quickAddBar = new LinearLayout(this);
+        quickAddBar.setOrientation(LinearLayout.HORIZONTAL);
+        quickAddBar.setPadding(0, 0, 0, dp(12));
+
+        Button addDadBtn = createFocusableButton("+ הוסף אבא", true);
+        addDadBtn.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        addDadBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showAddFamilyDialog();
+                showAddFamilyDialog("אבא");
             }
         });
-        mainContentContainer.addView(addBtn);
+        quickAddBar.addView(addDadBtn);
+
+        View g1 = new View(this);
+        g1.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
+        quickAddBar.addView(g1);
+
+        Button addMomBtn = createFocusableButton("+ הוסף אמא", true);
+        addMomBtn.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        addMomBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAddFamilyDialog("אמא");
+            }
+        });
+        quickAddBar.addView(addMomBtn);
+
+        mainContentContainer.addView(quickAddBar);
+
+        Button addCustomMember = createFocusableButton("+ הוסף בן משפחה נוסף", false);
+        addCustomMember.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAddFamilyDialog(null);
+            }
+        });
+        mainContentContainer.addView(addCustomMember);
 
         View card = createCardView();
         LinearLayout cardInner = (LinearLayout) card;
@@ -729,10 +960,10 @@ public class MainActivity extends Activity {
                 LinearLayout row = (LinearLayout) createFocusableRow(
                         m.name + " (" + m.relation + ") - גיל " + m.getAge(),
                         "תאריך לידה: " + m.day + "/" + m.month + "/" + m.year +
-                                (!m.hebrewDate.isEmpty() ? " | עברי: " + m.hebrewDate : "") +
+                                (m.hebrewDate != null && !m.hebrewDate.isEmpty() ? " | עברי: " + m.hebrewDate : "") +
                                 "\nהפרק האישי לשנה זו: מזמור " + HebrewDateUtil.toHebrewNumber(m.getPersonalTehillim()) +
                                 " (פרק " + m.getPersonalTehillim() + ")" +
-                                (!m.notes.isEmpty() ? "\nהערות: " + m.notes : "")
+                                (m.notes != null && !m.notes.isEmpty() ? "\nהערות: " + m.notes : "")
                 );
 
                 LinearLayout btnLayout = new LinearLayout(this);
@@ -747,6 +978,10 @@ public class MainActivity extends Activity {
                     }
                 });
                 btnLayout.addView(blessBtn);
+
+                View sp = new View(this);
+                sp.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
+                btnLayout.addView(sp);
 
                 Button delBtn = createFocusableButton("מחק", false);
                 delBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
@@ -765,7 +1000,7 @@ public class MainActivity extends Activity {
         mainContentContainer.addView(card);
     }
 
-    private void showAddFamilyDialog() {
+    private void showAddFamilyDialog(String defaultRelation) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("הוספת בן/בת משפחה");
 
@@ -774,14 +1009,84 @@ public class MainActivity extends Activity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(dp(20), dp(10), dp(20), dp(10));
 
+        // Quick Preset Buttons
+        TextView presetLabel = new TextView(this);
+        presetLabel.setText("בחירה מהירה:");
+        presetLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        presetLabel.setTextColor(Color.parseColor("#4B5563"));
+        layout.addView(presetLabel);
+
+        LinearLayout chipsRow = new LinearLayout(this);
+        chipsRow.setOrientation(LinearLayout.HORIZONTAL);
+        chipsRow.setPadding(0, dp(4), 0, dp(10));
+
+        Button chipDad = createChipButton("אבא");
+        Button chipMom = createChipButton("אמא");
+        Button chipOther = createChipButton("אחר");
+        chipsRow.addView(chipDad);
+
+        View cSp1 = new View(this);
+        cSp1.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
+        chipsRow.addView(cSp1);
+        chipsRow.addView(chipMom);
+
+        View cSp2 = new View(this);
+        cSp2.setLayoutParams(new LinearLayout.LayoutParams(dp(8), ViewGroup.LayoutParams.MATCH_PARENT));
+        chipsRow.addView(cSp2);
+        chipsRow.addView(chipOther);
+
+        layout.addView(chipsRow);
+
         final EditText etName = createLabeledInput(layout, "שם מלא:");
-        final EditText etRel = createLabeledInput(layout, "קשר משפחתי (אבא, אמא, בן, בת, נכד/ה...):");
+        final EditText etRel = createLabeledInput(layout, "קרבה (אבא / אמא / בן / בת / נכד...):");
+
+        // Set default name and relation to אבא or אמא
+        if ("אבא".equals(defaultRelation)) {
+            etName.setText("אבא");
+            etRel.setText("אבא");
+        } else if ("אמא".equals(defaultRelation)) {
+            etName.setText("אמא");
+            etRel.setText("אמא");
+        } else {
+            // Default preset is "אבא"
+            etName.setText("אבא");
+            etRel.setText("אבא");
+        }
+
+        chipDad.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                etName.setText("אבא");
+                etRel.setText("אבא");
+            }
+        });
+        chipMom.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                etName.setText("אמא");
+                etRel.setText("אמא");
+            }
+        });
+        chipOther.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                etName.setText("");
+                etRel.setText("");
+            }
+        });
+
         final EditText etDay = createLabeledInput(layout, "יום לידה (1-31):");
         etDay.setInputType(InputType.TYPE_CLASS_NUMBER);
+        etDay.setText("1");
+
         final EditText etMonth = createLabeledInput(layout, "חודש לידה (1-12):");
         etMonth.setInputType(InputType.TYPE_CLASS_NUMBER);
-        final EditText etYear = createLabeledInput(layout, "שנת לידה (למשל: 1985):");
+        etMonth.setText("1");
+
+        final EditText etYear = createLabeledInput(layout, "שנת לידה לועזית (למשל: 1965):");
         etYear.setInputType(InputType.TYPE_CLASS_NUMBER);
+        etYear.setText("1965");
+
         final EditText etNotes = createLabeledInput(layout, "הערות אישיות:");
 
         sv.addView(layout);
@@ -793,19 +1098,21 @@ public class MainActivity extends Activity {
                 String name = etName.getText().toString().trim();
                 String rel = etRel.getText().toString().trim();
                 if (name.isEmpty()) {
-                    Toast.makeText(MainActivity.this, "נא להזין שם", Toast.LENGTH_SHORT).show();
-                    return;
+                    name = "אבא";
+                }
+                if (rel.isEmpty()) {
+                    rel = "אבא";
                 }
 
                 int d = parseIntSafe(etDay.getText().toString(), 1);
                 int m = parseIntSafe(etMonth.getText().toString(), 1);
-                int y = parseIntSafe(etYear.getText().toString(), 1990);
+                int y = parseIntSafe(etYear.getText().toString(), 1965);
 
                 HebrewDateUtil.HebrewDate hd = HebrewDateUtil.getHebrewDate(y, m, d);
                 String hebDateStr = hd.formatHebrewDate();
 
                 dbHelper.insertMember(name, rel, d, m, y, hebDateStr, etNotes.getText().toString().trim());
-                Toast.makeText(MainActivity.this, "נוסף בהצלחה", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "נוסף בהצלחה!", Toast.LENGTH_SHORT).show();
                 switchTab(TAB_FAMILY);
             }
         });
@@ -834,15 +1141,15 @@ public class MainActivity extends Activity {
 
         final String blessing = "לכבוד " + m.name + " היקר/ה,\n\n" +
                 "מזל טוב לרגל יום הולדתך! שירבו שנותיך בבריאות איתנה, שמחה, נחת, ברכה והצלחה בכל מעשי ידיך.\n" +
-                "שתזכה לשנה מבורכת, שנה של עליה בתורה, מעשים טובים ואור גדול.\n" +
+                "שתזכה לשנה מבורכת, שנת עליה בתורה, מעשים טובים ואור גדול.\n" +
                 "פרק התהילים המלווה אותך לשנה זו: מזמור " + HebrewDateUtil.toHebrewNumber(m.getPersonalTehillim()) + ".\n\n" +
                 "באהבה ובהערכה רבה!";
 
         TextView tv = new TextView(this);
         tv.setText(blessing);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        tv.setTextColor(Color.parseColor("#1A2A44"));
-        tv.setPadding(dp(20), dp(15), dp(20), dp(10));
+        tv.setTextColor(Color.parseColor("#101D33"));
+        tv.setPadding(dp(20), dp(16), dp(20), dp(12));
         b.setView(tv);
 
         b.setPositiveButton("העתק ברכה", new DialogInterface.OnClickListener() {
@@ -871,10 +1178,9 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // SCREEN 5: תהילים ותפילה (Tehillim & Prayers)
+    // TAB 5: תהילים ותפילה (Tehillim & Prayers)
     // ========================================================
     private void renderTehillimScreen() {
-        // Section: Prayer names list
         View prayerNamesCard = createCardView();
         LinearLayout pnInner = (LinearLayout) prayerNamesCard;
 
@@ -886,7 +1192,7 @@ public class MainActivity extends Activity {
         pTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         pnHeader.addView(pTitle);
 
-        Button addNameBtn = createFocusableButton("+ הוסף שם", true);
+        Button addNameBtn = createFocusableButton("+ הוסף שם לתפילה", true);
         addNameBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -925,7 +1231,6 @@ public class MainActivity extends Activity {
         }
         mainContentContainer.addView(prayerNamesCard);
 
-        // Section: Selected Tehillim chapters with text
         View chaptersCard = createCardView();
         LinearLayout chInner = (LinearLayout) chaptersCard;
         chInner.addView(createSectionHeader("פרקי תהילים נבחרים"));
@@ -966,7 +1271,6 @@ public class MainActivity extends Activity {
         etType.setText("לרפואה שלמה");
 
         b.setView(layout);
-
         b.setPositiveButton("שמור", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -991,8 +1295,8 @@ public class MainActivity extends Activity {
         TextView tv = new TextView(this);
         tv.setText(text);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
-        tv.setLineSpacing(dp(6), 1.2f);
-        tv.setTextColor(Color.parseColor("#1A2A44"));
+        tv.setLineSpacing(dp(6), 1.25f);
+        tv.setTextColor(Color.parseColor("#101D33"));
         tv.setTypeface(Typeface.SERIF);
         tv.setPadding(dp(20), dp(16), dp(20), dp(20));
         sv.addView(tv);
@@ -1003,7 +1307,7 @@ public class MainActivity extends Activity {
     }
 
     // ========================================================
-    // SCREEN 6: הגדרות והתראות (Settings & Alerts)
+    // TAB 6: הגדרות (Settings)
     // ========================================================
     private void renderSettingsScreen() {
         View card = createCardView();
@@ -1018,10 +1322,10 @@ public class MainActivity extends Activity {
         inner.addView(desc);
 
         String[] alertOptions = {
-                "✓ תזכורת שבוע לפני המועד",
-                "✓ תזכורת יום לפני המועד (בערב)",
-                "✓ תזכורת ביום האירוע עצמו בבוקר",
-                "✓ תזכורת שבועית לפרק תהילים"
+                "✓ תזכורת שבוע לפני התאריך העברי",
+                "✓ תזכורת יום לפני המועד (בערב להדלקת נר)",
+                "✓ תזכורת בבוקר יום היארצייט (לקדיש)",
+                "✓ תזכורת שבועית לפרק תהילים אישי"
         };
 
         for (String opt : alertOptions) {
@@ -1052,30 +1356,29 @@ public class MainActivity extends Activity {
 
         mainContentContainer.addView(card);
 
-        // About card
         View aboutCard = createCardView();
         LinearLayout aboutInner = (LinearLayout) aboutCard;
-        aboutInner.addView(createSectionHeader("אודות זיכרון וברכה"));
+        aboutInner.addView(createSectionHeader("אודות 'זיכרון וברכה'"));
 
         TextView aboutTv = new TextView(this);
-        aboutTv.setText("אפליקציית 'זיכרון וברכה' פותחה במיוחד כדי לשמר ולחבר את המשפחה למסורת, לימי הזיכרון, לשמחות ולימי ההולדת.\nמותאמת לשימוש פשוט, נעים ומכובד, כולל מקשים וללא צורך במסך מגע.");
+        aboutTv.setText("אפליקציית 'זיכרון וברכה' מותאמת באופן מלא לכל סוגי המכשירים:\n\n• שליטה מלאה גם במסך מגע (טאץ') וגם במקשי ניווט (D-Pad).\n• הגדרת יארצייטים לפי לוח השנה העברי במדויק (יום וחודש עברי).\n• שמות וקשרים בברירת מחדל לאבא ואמא לחיסכון בזמן הקלדה.\n• חישוב פרק תהילים אישי לכל גיל ושיתוף ברכות מרגשות.");
         aboutTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         aboutTv.setTextColor(Color.parseColor("#4B5563"));
-        aboutTv.setLineSpacing(dp(4), 1.2f);
+        aboutTv.setLineSpacing(dp(4), 1.25f);
         aboutInner.addView(aboutTv);
 
         mainContentContainer.addView(aboutCard);
     }
 
     // ========================================================
-    // UI Helpers & Builders
+    // UI Helpers (Both Touch & Keypad optimized)
     // ========================================================
     private View createCardView() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackgroundResource(R.drawable.card_selector);
         card.setFocusable(true);
-        card.setFocusableInTouchMode(true);
+        card.setFocusableInTouchMode(false);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1090,7 +1393,7 @@ public class MainActivity extends Activity {
         tv.setText(title);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
         tv.setTypeface(Typeface.DEFAULT_BOLD);
-        tv.setTextColor(Color.parseColor("#1A2A44"));
+        tv.setTextColor(Color.parseColor("#101D33"));
         tv.setPadding(0, 0, 0, dp(8));
         return tv;
     }
@@ -1100,10 +1403,24 @@ public class MainActivity extends Activity {
         b.setText(text);
         b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         b.setTypeface(Typeface.DEFAULT_BOLD);
-        b.setTextColor(isGold ? Color.parseColor("#1A2A44") : Color.WHITE);
+        b.setTextColor(isGold ? Color.parseColor("#101D33") : Color.WHITE);
         b.setBackgroundResource(isGold ? R.drawable.btn_gold_selector : R.drawable.btn_selector);
+        b.setMinHeight(dp(48)); // Standard touch target size
         b.setFocusable(true);
-        b.setFocusableInTouchMode(true);
+        b.setFocusableInTouchMode(false); // Responds on 1st touch
+        return b;
+    }
+
+    private Button createChipButton(String text) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        b.setTypeface(Typeface.DEFAULT_BOLD);
+        b.setTextColor(Color.parseColor("#101D33"));
+        b.setBackgroundResource(R.drawable.chip_selector);
+        b.setMinHeight(dp(40));
+        b.setFocusable(true);
+        b.setFocusableInTouchMode(false);
         return b;
     }
 
@@ -1112,7 +1429,7 @@ public class MainActivity extends Activity {
         row.setOrientation(LinearLayout.VERTICAL);
         row.setBackgroundResource(R.drawable.card_selector);
         row.setFocusable(true);
-        row.setFocusableInTouchMode(true);
+        row.setFocusableInTouchMode(false);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(0, dp(4), 0, dp(8));
@@ -1122,7 +1439,7 @@ public class MainActivity extends Activity {
         tvTitle.setText(mainText);
         tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        tvTitle.setTextColor(Color.parseColor("#1A2A44"));
+        tvTitle.setTextColor(Color.parseColor("#101D33"));
         row.addView(tvTitle);
 
         if (subText != null && !subText.isEmpty()) {
@@ -1141,7 +1458,7 @@ public class MainActivity extends Activity {
         TextView tv = new TextView(this);
         tv.setText(label);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        tv.setTextColor(Color.parseColor("#1A2A44"));
+        tv.setTextColor(Color.parseColor("#101D33"));
         tv.setTypeface(Typeface.DEFAULT_BOLD);
         tv.setPadding(0, dp(6), 0, dp(2));
         parent.addView(tv);
@@ -1149,7 +1466,7 @@ public class MainActivity extends Activity {
         EditText et = new EditText(this);
         et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         et.setBackgroundResource(R.drawable.input_selector);
-        et.setFocusable(true);
+        et.setMinHeight(dp(48));
         et.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         parent.addView(et);
@@ -1172,7 +1489,6 @@ public class MainActivity extends Activity {
         );
     }
 
-    // Full key handling for non-touch device (D-Pad, Back, Enter)
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
